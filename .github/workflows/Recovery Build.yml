@@ -36,7 +36,7 @@ on:
       MAKEFILE_NAME:
         description: 'MAKEFILE_NAME'
         required: true
-        default: 'KG5j_garden'
+        default: 'twrp_KG5j'
       BUILD_TARGET:
         description: 'BUILD_TARGET'
         required: true
