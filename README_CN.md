@@ -1,6 +1,6 @@
 # 使用 Action 编译 Recovery
 
-- 支持 OrangeFox, TWRP 及其它衍生版本请使用 [Action-TWRP-Builder](https://github.com/azwhikaru/Action-TWRP-Builder)
+- 支持 OrangeFox, TWRP 及其它衍生版本请使用 [Action-TWRP-Builder](https://github.com/kelexine/TWRP-Builder)
 
 ---
 
