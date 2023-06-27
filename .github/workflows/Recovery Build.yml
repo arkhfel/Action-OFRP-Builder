@@ -122,7 +122,7 @@ jobs:
         
     - name: Renaming into OrangeFox
       run: |
-        cd out/target/product/${{ github.event.inputs.DEVICE_NAME }}
+        cd ~/out/target/product/${{ github.event.inputs.DEVICE_NAME }}
         mv ${{ github.event.inputs.BUILD_TARGET }}.img ${{ github.event.inputs.MANIFEST_BRANCH }}_11.0-${{ github.event.inputs.DEVICE_NAME }}-${{ steps.props.outputs.date }}.img
         echo "Done renaming into ${{ github.event.inputs.MANIFEST_BRANCH }}_11.0-${{ github.event.inputs.DEVICE_NAME }}-${{ steps.props.outputs.date }}.img"
       working-directory: ${{ steps.pwd.outputs.workdir }}
