@@ -62,7 +62,7 @@ jobs:
       run: |
         mkdir workspace
         cd workspace
-        echo "workspace-folder=$(pwd)" >> $GITHUB_OUTPUT
+        echo "workdir=$(pwd)" >> $GITHUB_OUTPUT
       id: pwd
 
     - name: Prepare the build environment
@@ -73,7 +73,7 @@ jobs:
         sudo bash setup/android_build_env.sh
         sed -i 's/cd -/cd ../g' setup/install_android_sdk.sh
         sudo bash setup/install_android_sdk.sh
-      working-directory: ${{ steps.pwd.outputs.workspace-folder }}
+      working-directory: ${{ steps.pwd.outputs.workdir }}
 
     - name: Sync OrangeFox sources and minimal manifest
       run: |
@@ -81,13 +81,13 @@ jobs:
         git clone ${{ github.event.inputs.SYNC_URL }}
         cd sync
         ./orangefox_sync.sh --branch ${{ github.event.inputs.MANIFEST_BRANCH }} --path ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
-      working-directory: ${{ steps.pwd.outputs.workspace-folder }}
+      working-directory: ${{ steps.pwd.outputs.workdir }}
 
     - name: Clone device tree
       run: |
         cd ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
         git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ./${{ github.event.inputs.DEVICE_PATH }}
-      working-directory: ${{ steps.pwd.outputs.workspace-folder }}
+      working-directory: ${{ steps.pwd.outputs.workdir }}
 
     - name: Clone common tree
       if: |
@@ -96,7 +96,7 @@ jobs:
       run: |
         cd ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
         git clone ${{ github.event.inputs.COMMON_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ./${{ github.event.inputs.COMMON_PATH }}
-      working-directory: ${{ steps.pwd.outputs.workspace-folder }}
+      working-directory: ${{ steps.pwd.outputs.workdir }}
 
     - name: Set Swap Space
       uses: pierotofy/set-swap-space@master
@@ -105,20 +105,30 @@ jobs:
 
     - name: Building recovery
       run: |
-        cd ${{ steps.pwd.outputs.workspace-folder }}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
-        set +e
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
-        set -e
         lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && make clean && mka adbd ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
-      working-directory: ${{ steps.pwd.outputs.workspace-folder }}
+        echo "Done building your ${{ github.event.inputs.BUILD_TARGET }}.img"
+      working-directory: ${{ steps.pwd.outputs.workdir }}
       continue-on-error: true
+      
+    - name: Set Properties
+      id: props
+      run: |
+        echo "date=$(date +%Y%m%d)" >> $GITHUB_OUTPUT
+        
+    - name: Renaming into OrangeFox
+      run: |
+        cd out/target/product/${{ github.event.inputs.DEVICE_NAME }}
+        mv ${{ github.event.inputs.BUILD_TARGET }}.img ${{ github.event.inputs.MANIFEST_BRANCH }}_11.0-${{ github.event.inputs.DEVICE_NAME }}-${{ steps.props.outputs.date }}.img
+        echo "Done renaming into ${{ github.event.inputs.MANIFEST_BRANCH }}_11.0-${{ github.event.inputs.DEVICE_NAME }}-${{ steps.props.outputs.date }}.img"
+      working-directory: ${{ steps.pwd.outputs.workdir }}
 
     - name: Upload to Release
       uses: ncipollo/release-action@v1.11.1
       with:
         artifacts: workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/${{ github.event.inputs.MANIFEST_BRANCH }}*.img
-        name: Unofficial-Alpha TWRP for ${{ github.event.inputs.DEVICE_NAME }} - Build ${{ steps.props.outputs.date }} / ${{ github.run_id }}
+        name: Unofficial-Alpha OrangeFox for ${{ github.event.inputs.DEVICE_NAME }} - Build ${{ steps.props.outputs.date }} / ${{ github.run_id }}
         draft: false
         prerelease: true
         tag: ${{ github.run_id }}-${{ steps.props.outputs.date }}
@@ -127,5 +137,8 @@ jobs:
           Device: ${{ github.event.inputs.DEVICE_NAME }}
           Manifest: ${{ github.event.inputs.MANIFEST_URL }} -b ${{ github.event.inputs.MANIFEST_BRANCH }}
           Status: Alpha - Test it Yourself.
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Link of Release
+      run: |
+        echo "Here is your newly-built Custom Recovery."
+        echo "https://github.com/${GITHUB_REPOSITORY}/releases/tag/${{ github.run_id }}-${{ steps.props.outputs.date }}"
